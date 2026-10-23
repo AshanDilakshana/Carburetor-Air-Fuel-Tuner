@@ -1,6 +1,6 @@
 /*
   ==============================================================
-  Bajaj Pulsar NS 200 - DIY Carburetor Air/Fuel Tuning Monitor
+  DIY Carburetor Air/Fuel Tuning Monitor
   ==============================================================
   Hardware:
     - ESP32 Development Board
@@ -117,7 +117,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NS 200 Carburetor Tuner</title>
+  <title>Carburetor Air/Fuel Tuner</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background: #0b0f19; color: #f8fafc; padding: 14px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
@@ -178,7 +178,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <body>
   <div class="container">
     <header>
-      <h1>NS 200 Carburetor Live Monitor</h1>
+      <h1>Carburetor Live Monitor</h1>
       <div class="sub">Direct Wi-Fi Tuning Dashboard</div>
     </header>
 
