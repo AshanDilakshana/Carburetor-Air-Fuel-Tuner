@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NS 200 Carburetor Tuning Gauge & Range Monitor</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(22, 30, 49, 0.92);
+      --card-border: rgba(56, 189, 248, 0.18);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --mq2: #f97316;
+      --mq135: #a855f7;
+      --lean: #f59e0b;
+      --optimal: #10b981;
+      --s-rich: #f87171;
+      --rich: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #1e293b 0%, var(--bg) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      max-width: 920px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Top Nav */
+    header {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 14px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    }
+
+    .brand h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: #1e293b;
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    button:hover {
+      background: #334155;
+      border-color: var(--primary);
+    }
+    button.btn-primary {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      border: none;
+    }
+
+    input[type="text"] {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      width: 120px;
+      outline: none;
+    }
+
+    .conn-badge {
+      font-size: 0.72rem;
+      padding: 4px 8px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .conn-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+    .conn-dot.active {
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    /* ======================================================== */
+    /* 🎯 MAIN TUNING LEVEL & RANGE METER (THE KEY FEATURE)     */
+    /* ======================================================== */
+    .tuning-meter-card {
+      background: var(--card-bg);
+      border: 2px solid rgba(56, 189, 248, 0.28);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 10px 35px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .meter-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .meter-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Trend Indicator (Fuel Delta / Trend) */
+    .trend-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease;
+    }
+    .trend-up {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+    .trend-down {
+      color: #f59e0b;
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+    .trend-stable {
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    /* Main Big Level Display */
+    .level-hero {
+      text-align: center;
+      margin: 10px 0 20px 0;
+    }
+    .level-status {
+      font-size: 2.2rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: color 0.3s;
+    }
+    .level-sub {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    /* Multi-Zone Range Bar */
+    .range-bar-wrapper {
+      position: relative;
+      margin: 32px 6px 20px 6px;
+    }
+
+    /* Pointer / Needle */
+    .needle-container {
+      position: absolute;
+      top: -24px;
+      left: 0%;
+      transform: translateX(-50%);
+      transition: left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .needle-badge {
+      background: #ffffff;
+      color: #0b0f19;
+      font-weight: 900;
+      font-size: 0.8rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      white-space: nowrap;
+    }
+
+    .needle-arrow {
+      width: 0;
+      height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-top: 8px solid #ffffff;
+      margin-top: -1px;
+    }
+
+    /* The Continuous Segmented Track */
+    .range-track {
+      height: 22px;
+      border-radius: 11px;
+      background: #0f172a;
+      display: flex;
+      overflow: hidden;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .zone {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      position: relative;
+      transition: opacity 0.2s;
+    }
+
+    .zone-lean { width: 22%; background: linear-gradient(90deg, #d97706, #f59e0b); }
+    .zone-optimal { width: 28%; background: linear-gradient(90deg, #059669, #10b981); box-shadow: 0 0 16px rgba(16, 185, 129, 0.4); }
+    .zone-srich { width: 22%; background: linear-gradient(90deg, #f87171, #ef4444); }
+    .zone-rich { width: 28%; background: linear-gradient(90deg, #dc2626, #991b1b); }
+
+    /* Range Scale Numbers */
+    .range-scale {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Zone Legend Cards */
+    .zone-legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .legend-box {
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 10px;
+      padding: 10px 12px;
+      border-left: 4px solid #fff;
+    }
+    .legend-box h4 {
+      font-size: 0.82rem;
+      margin-bottom: 2px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .legend-box p {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .leg-lean { border-color: var(--lean); }
+    .leg-optimal { border-color: var(--optimal); background: rgba(16, 185, 129, 0.08); }
+    .leg-srich { border-color: var(--s-rich); }
+    .leg-rich { border-color: var(--rich); }
+
+    /* Cards Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .card-val {
+      font-size: 2.6rem;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding-top: 8px;
+      margin-top: 8px;
+    }
+
+    /* Chart */
+    .chart-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    canvas {
+      width: 100%;
+      height: 180px;
+      background: #060a12;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Top Header -->
+    <header>
+      <div class="brand">
+        <h1>NS 200 Carburetor Tuning Monitor</h1>
+        <p>Live Exhaust Gas Analysis • Fuel & Air Ratio Range Meter</p>
+      </div>
+      <div class="controls">
+        <div class="conn-badge">
+          <span id="connDot" class="conn-dot"></span>
+          <span id="connStatus">Disconnected</span>
+        </div>
+        <input type="text" id="ipInput" value="192.168.4.1" placeholder="ESP32 IP">
+        <button id="btnWifi" class="btn-primary" onclick="toggleWiFi()">📡 Wi-Fi Live</button>
+        <button id="btnSerial" onclick="connectWebSerial()">🔌 USB Serial</button>
+        <button id="btnDemo" onclick="toggleDemo()">🧪 Demo (Test)</button>
+      </div>
+    </header>
+
+    <!-- ======================================================== -->
+    <!-- 🎯 1. TUNING LEVEL & RANGE METER (KEY COMPONENT)         -->
+    <!-- ======================================================== -->
+    <div class="tuning-meter-card">
+      <div class="meter-top">
+        <div class="meter-title">
+          <span>🎯 Real-Time Carburetor Tuning Range</span>
+        </div>
+        
+        <!-- Live Trend / Delta -->
+        <div id="trendBadge" class="trend-indicator trend-stable">
+          <span id="trendIcon">▬</span>
+          <span id="trendText">Stable (0 /s)</span>
+        </div>
+      </div>
+
+      <!-- Main Diagnosis Title -->
+      <div class="level-hero">
+        <div id="statusTitle" class="level-status" style="color: var(--optimal);">INITIALIZING...</div>
+        <div id="statusAdvice" class="level-sub">Waiting for sensor connection...</div>
+      </div>
+
+      <!-- Multi-Zone Colored Range Track with Sliding Needle -->
+      <div class="range-bar-wrapper">
+        <div class="needle-container" id="needle">
+          <div class="needle-badge" id="needleVal">0</div>
+          <div class="needle-arrow"></div>
+        </div>
+
+        <div class="range-track">
+          <div class="zone zone-lean" style="width: 15%;">LEAN</div>
+          <div class="zone zone-optimal" style="width: 30%;">★ OPTIMAL ZONE ★</div>
+          <div class="zone zone-srich" style="width: 25%;">SLIGHTLY RICH</div>
+          <div class="zone zone-rich" style="width: 30%;">VERY RICH</div>
+        </div>
+
+        <!-- Scale markers -->
+        <div class="range-scale">
+          <span>72 (Clean Air)</span>
+          <span>600 (Lean Limit)</span>
+          <span>1800 (Opt Limit)</span>
+          <span>2800 (Rich Limit)</span>
+          <span>4095 (Max)</span>
+        </div>
+      </div>
+
+      <!-- Zone Information Cards -->
+      <div class="zone-legend">
+        <div class="legend-box leg-lean">
+          <h4>LEAN <span style="color: var(--lean);">150 - 600</span></h4>
+          <p>Fuel starved / Air excess. Engine may run hot. Turn Pilot Screw OUT (richer).</p>
+        </div>
+        <div class="legend-box leg-optimal">
+          <h4>★ OPTIMAL ★ <span style="color: var(--optimal);">600 - 1800</span></h4>
+          <p>Target stoichiometric zone! Complete combustion and smooth idle RPM.</p>
+        </div>
+        <div class="legend-box leg-srich">
+          <h4>SLIGHT RICH <span style="color: var(--s-rich);">1800 - 2800</span></h4>
+          <p>Slightly rich. Good throttle response, but higher fuel consumption.</p>
+        </div>
+        <div class="legend-box leg-rich">
+          <h4>VERY RICH <span style="color: var(--rich);">2800 - 4095</span></h4>
+          <p>Excess unburnt fuel & soot. Turn Pilot Screw IN (leaner).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Sensor Cards -->
+    <div class="grid">
+      <!-- MQ-2 -->
+      <div class="card">
+        <div class="card-head">
+          <span>MQ-2 (UNBURNT FUEL / HYDROCARBONS)</span>
+          <span style="color: var(--mq2); font-weight: 700;">GPIO 34</span>
+        </div>
+        <div class="card-val" id="mq2Val" style="color: var(--mq2);">0</div>
+        <div class="card-footer">
+          <span>Voltage: <b id="mq2Volt">0.00 V</b></span>
+          <span>Peak Level: <b id="mq2Peak">0</b></span>
+        </div>
+      </div>
+
+      <!-- MQ-135 -->
+      <div class="card">
+        <div class="card-head">
+          <span>MQ-135 (EXHAUST INDEX / CO2 / NOX)</span>
+          <span style="color: var(--mq135); font-weight: 700;">GPIO 35</span>
+        </div>
+        <div class="card-val" id="mq135Val" style="color: var(--mq135);">0</div>
+        <div class="card-footer">
+          <span>Voltage: <b id="mq135Volt">0.00 V</b></span>
+          <span>Peak Level: <b id="mq135Peak">0</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Chart -->
+    <div class="chart-panel">
+      <div class="chart-header">
+        <span>Live Sensor Waveform</span>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">
+          <span style="color: var(--mq2);">■ MQ-2 (Fuel)</span> &nbsp;&nbsp; 
+          <span style="color: var(--mq135);">■ MQ-135 (Exhaust)</span>
+        </span>
+      </div>
+      <canvas id="liveChart"></canvas>
+    </div>
+
+  </div>
+
+  <script>
+    // Canvas Setup
+    const canvas = document.getElementById('liveChart');
+    const ctx = canvas.getContext('2d');
+    function resizeCanvas() {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const maxPoints = 80;
+    const mq2History = new Array(maxPoints).fill(0);
+    const mq135History = new Array(maxPoints).fill(0);
+
+    let peakMQ2 = 0;
+    let peakMQ135 = 0;
+
+    // Trend Tracker
+    let previousMQ2 = 0;
+    let lastTrendTime = Date.now();
+
+    function renderChart() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Grid
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.lineWidth = 1;
+      for (let i = 1; i <= 3; i++) {
+        const y = (canvas.height / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      function drawTrace(data, color) {
+        ctx.beginPath();
+        for (let i = 0; i < data.length; i++) {
+          const x = (i / (maxPoints - 1)) * canvas.width;
+          const y = canvas.height - ((data[i] / 4095) * canvas.height);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+      }
+
+      drawTrace(mq135History, '#a855f7');
+      drawTrace(mq2History, '#f97316');
+    }
+
+    // Update the UI with fresh readings
+    function updateDashboard(mq2, mq135) {
+      if (mq2 > peakMQ2) peakMQ2 = mq2;
+      if (mq135 > peakMQ135) peakMQ135 = mq135;
+
+      // 1. Raw & Voltages
+      document.getElementById('mq2Val').innerText = mq2;
+      document.getElementById('mq2Volt').innerText = ((mq2 / 4095) * 3.3).toFixed(2) + ' V';
+      document.getElementById('mq2Peak').innerText = peakMQ2;
+
+      document.getElementById('mq135Val').innerText = mq135;
+      document.getElementById('mq135Volt').innerText = ((mq135 / 4095) * 3.3).toFixed(2) + ' V';
+      document.getElementById('mq135Peak').innerText = peakMQ135;
+
+      // 2. Needle Movement on the Range Bar (Dual-Sensor Fusion: 70% Fuel MQ-2 + 30% Exhaust Density MQ-135)
+      const compositeScore = Math.round((mq2 * 0.70) + (mq135 * 0.30));
+      const percentage = Math.min(100, Math.max(0, (compositeScore / 4095) * 100));
+      document.getElementById('needle').style.left = percentage + '%';
+      document.getElementById('needleVal').innerText = compositeScore;
+
+      // 3. Trend Detection
+      const now = Date.now();
+      if (now - lastTrendTime > 400) {
+        const delta = mq2 - previousMQ2;
+        const trendBadge = document.getElementById('trendBadge');
+        const trendIcon = document.getElementById('trendIcon');
+        const trendText = document.getElementById('trendText');
+
+        if (delta > 35) {
+          trendBadge.className = 'trend-indicator trend-up';
+          trendIcon.innerText = '▲';
+          trendText.innerText = `Fuel Increasing (+${delta}/s)`;
+        } else if (delta < -35) {
+          trendBadge.className = 'trend-indicator trend-down';
+          trendIcon.innerText = '▼';
+          trendText.innerText = `Fuel Decreasing (${delta}/s)`;
+        } else {
+          trendBadge.className = 'trend-indicator trend-stable';
+          trendIcon.innerText = '▬';
+          trendText.innerText = 'Stable Idle';
+        }
+
+        previousMQ2 = mq2;
+        lastTrendTime = now;
+      }
+
+      // 4. Dual-Sensor Tuning Range Evaluation & Smart Advice
+      const titleEl = document.getElementById('statusTitle');
+      const adviceEl = document.getElementById('statusAdvice');
+
+      if (mq2 < 150 && mq135 < 150) {
+        titleEl.innerText = "CLEAN AIR / READY";
+        titleEl.style.color = "var(--primary)";
+        adviceEl.innerText = "Probe is in clean air. Insert sampling probe into exhaust and start engine.";
+      } else if (mq2 > 2000 && mq135 < 350) {
+        titleEl.innerText = "⚠️ MISFIRE DETECTED";
+        titleEl.style.color = "#ec4899";
+        adviceEl.innerText = "High unburnt fuel but low CO2! Fuel is not igniting. Check spark plug / ignition coil.";
+      } else if (compositeScore < 600) {
+        titleEl.innerText = "LEAN (TOO MUCH AIR)";
+        titleEl.style.color = "var(--lean)";
+        adviceEl.innerText = "Engine running fuel starved / hot. Turn Pilot Screw OUT (Outward) to enrich mixture.";
+      } else if (compositeScore <= 1800) {
+        titleEl.innerText = "★ OPTIMAL TUNE ★";
+        titleEl.style.color = "var(--optimal)";
+        adviceEl.innerText = "Perfect stoichiometric combustion! Clean burn with healthy CO2 output. Keep screw here.";
+      } else if (compositeScore <= 2800) {
+        titleEl.innerText = "SLIGHTLY RICH";
+        titleEl.style.color = "var(--s-rich)";
+        adviceEl.innerText = "Good throttle response, but slightly rich. Turn Pilot Screw IN slightly for better mileage.";
+      } else {
+        titleEl.innerText = "VERY RICH (EXCESS FUEL)";
+        titleEl.style.color = "var(--rich)";
+        adviceEl.innerText = "Excessive unburnt fuel & soot. Turn Pilot Screw IN (Inward) to lean mixture.";
+      }
+
+      // 5. Chart push
+      mq2History.shift();
+      mq2History.push(mq2);
+      mq135History.shift();
+      mq135History.push(mq135);
+
+      renderChart();
+    }
+
+    // Mode 1: Wi-Fi Polling
+    let wifiTimer = null;
+    function toggleWiFi() {
+      const btn = document.getElementById('btnWifi');
+      const ip = document.getElementById('ipInput').value.trim();
+
+      // Disconnect USB if active
+      if (serialPort) {
+        connectWebSerial();
+      }
+      if (demoTimer) {
+        toggleDemo();
+      }
+
+      if (wifiTimer) {
+        clearInterval(wifiTimer);
+        wifiTimer = null;
+        btn.innerText = "📡 Wi-Fi Live";
+        setConnected(false, "Disconnected");
+        return;
+      }
+
+      setConnected(true, "Connecting to " + ip + "...");
+      btn.innerText = "⏹ Disconnect";
+
+      wifiTimer = setInterval(async () => {
+        try {
+          const res = await fetch(`http://${ip}/data`, { cache: 'no-store' });
+          const d = await res.json();
+          setConnected(true, `Connected to Wi-Fi (${ip})`);
+          updateDashboard(d.mq2, d.mq135);
+        } catch (e) {
+          setConnected(false, "Wi-Fi Error - Check IP Address");
+          document.getElementById('statusAdvice').innerText = "Cannot reach http://" + ip + ". Check if phone/laptop is on hotspot 'Faaa' and enter correct ESP32 IP.";
+        }
+      }, 250);
+    }
+
+    // Mode 2: Web Serial USB
+    let serialPort = null;
+    let serialReader = null;
+    let keepReading = false;
+    let dataReceivedCount = 0;
+
+    async function connectWebSerial() {
+      if (!('serial' in navigator)) {
+        alert("Web Serial is supported on Google Chrome and Microsoft Edge on PC/Mac.");
+        return;
+      }
+
+      // Disconnect Wi-Fi or Demo if active
+      if (wifiTimer) {
+        clearInterval(wifiTimer);
+        wifiTimer = null;
+        document.getElementById('btnWifi').innerText = "📡 Wi-Fi Live";
+      }
+      if (demoTimer) {
+        toggleDemo();
+      }
+
+      if (serialPort) {
+        keepReading = false;
+        if (serialReader) {
+          try { await serialReader.cancel(); } catch(e){}
+        }
+        try { await serialPort.close(); } catch(e){}
+        serialPort = null;
+        document.getElementById('btnSerial').innerText = "🔌 USB Serial";
+        setConnected(false, "Disconnected");
+        return;
+      }
+
+      try {
+        serialPort = await navigator.serial.requestPort();
+        await serialPort.open({ baudRate: 115200 });
+        document.getElementById('btnSerial').innerText = "⏹ Disconnect USB";
+        setConnected(true, "Connected via USB (115200 baud)");
+
+        dataReceivedCount = 0;
+
+        // Check if Arduino IDE Serial Monitor is blocking the port
+        setTimeout(() => {
+          if (dataReceivedCount === 0 && serialPort) {
+            document.getElementById('statusAdvice').innerText = "⚠️ Connected to USB but 0 bytes received! Please CLOSE the Arduino IDE Serial Monitor tab so the browser can read the port.";
+            document.getElementById('statusTitle').innerText = "PORT BUSY";
+            document.getElementById('statusTitle').style.color = "#f59e0b";
+          }
+        }, 2000);
+
+        keepReading = true;
+        const textDecoder = new TextDecoderStream();
+        serialPort.readable.pipeTo(textDecoder.writable);
+        const reader = textDecoder.readable.getReader();
+        serialReader = reader;
+
+        let buf = "";
+        while (keepReading) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value) {
+            dataReceivedCount++;
+            buf += value;
+            let lines = buf.split("\n");
+            buf = lines.pop();
+
+            for (const line of lines) {
+              const mq2Match = line.match(/MQ2[^:]*:(\d+)/i);
+              const mq135Match = line.match(/MQ135[^:]*:(\d+)/i);
+              if (mq2Match && mq135Match) {
+                updateDashboard(parseInt(mq2Match[1], 10), parseInt(mq135Match[1], 10));
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("USB Serial error:", err);
+        setConnected(false, "USB Disconnected");
+      }
+    }
+
+    // Mode 3: Demo (Test without hardware)
+    let demoTimer = null;
+    function toggleDemo() {
+      const btn = document.getElementById('btnDemo');
+      if (demoTimer) {
+        clearInterval(demoTimer);
+        demoTimer = null;
+        btn.innerText = "🧪 Demo (Test)";
+        setConnected(false, "Disconnected");
+        return;
+      }
+
+      btn.innerText = "⏹ Stop Demo";
+      setConnected(true, "Demo Mode Active");
+
+      let val2 = 1400;
+      let val135 = 1100;
+      let trendDir = 1;
+
+      demoTimer = setInterval(() => {
+        val2 += (Math.random() * 90 - 40) * trendDir;
+        if (val2 > 3300) trendDir = -1;
+        if (val2 < 600) trendDir = 1;
+
+        val135 = Math.round(val2 * 0.7 + (Math.random() * 50));
+        updateDashboard(Math.round(val2), Math.round(val135));
+      }, 250);
+    }
+
+    function setConnected(active, text) {
+      document.getElementById('connDot').className = 'conn-dot' + (active ? ' active' : '');
+      document.getElementById('connStatus').innerText = text;
+    }
+  </script>
+</body>
+</html>
